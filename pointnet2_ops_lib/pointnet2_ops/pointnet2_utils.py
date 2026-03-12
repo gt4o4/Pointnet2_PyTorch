@@ -21,10 +21,16 @@ except ImportError:
     _ext_headers = glob.glob(osp.join(_ext_src_root, "include", "*"))
 
     os.environ["TORCH_CUDA_ARCH_LIST"] = "7.5;8.0;8.6;8.9;9.0"
+    # PyTorch 2.10+ no longer adds CUDA_HOME/include for the host compiler.
+    _extra_inc = [osp.join(_ext_src_root, "include")]
+    from torch.utils.cpp_extension import _find_cuda_home as _fch
+    _cuda_home = os.environ.get("CUDA_HOME") or _fch()
+    if _cuda_home and osp.isdir(osp.join(_cuda_home, "include")):
+        _extra_inc.append(osp.join(_cuda_home, "include"))
     _ext = load(
         "_ext",
         sources=_ext_sources,
-        extra_include_paths=[osp.join(_ext_src_root, "include")],
+        extra_include_paths=_extra_inc,
         extra_cflags=["-O3"],
         extra_cuda_cflags=["-O3", "-Xfatbin", "-compress-all"],
         with_cuda=True,
